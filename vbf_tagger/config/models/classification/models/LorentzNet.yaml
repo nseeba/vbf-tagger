@@ -1,0 +1,15 @@
+_target_: vbf_tagger.models.LorentzNet.classification
+name: classification
+hyperparameters:
+    n_scalar: 25
+    n_hidden: 128
+    n_class: 2
+    dropout: 0.1
+    n_layers: 4
+    c_weight: 1e-3
+    verbosity: 1
+    lr: 1e-3
+    # pos_weight: null
+checkpoint:
+    model: null
+    losses: null

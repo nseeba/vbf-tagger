@@ -1,0 +1,8 @@
+defaults:
+    - _self_
+    - environment@host: manivald  # Options: lumi, manivald
+    - datasets@dataset: 22pre
+    - models: models
+    - datasets@datasets.22pre: 22pre
+    - evaluation: evaluation
+    - training

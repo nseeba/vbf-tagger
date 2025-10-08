@@ -1,0 +1,46 @@
+name: 22pre
+input_dim: 1200
+branches: null
+tree_path: null
+
+raw_input_dir: ${host.data_dir}/22pre/
+data_dir: ${host.data_dir}/22pre/
+
+datasets:
+  vbf:   ${host.data_dir}/22pre/hh_vbf/preprocessed_filtered/
+  ggf:   ${host.data_dir}/22pre/hh_ggf/preprocessed_filtered/
+  tt_sl: ${host.data_dir}/22pre/tt_sl/preprocessed_filtered/
+
+# Use both signal (vbf) and background (ggf, ttbar) for training
+train_dataset: [vbf, ggf, tt_sl]
+val_dataset:   [vbf, ggf, tt_sl]
+test_dataset:  [vbf, ggf, tt_sl]
+
+# Relative to each dataset directory
+train_dir: train
+val_dir: val
+test_dir: test
+
+
+# name: 22pre
+# input_dim: 1200
+# branches: null
+# tree_path: null
+
+# raw_input_dir: ${host.data_dir}/22pre/
+# data_dir: ${host.data_dir}/22pre/hh_vbf/preprocessed_filtered/
+
+# # Only one dataset: VBF
+# datasets:
+#   vbf: ${host.data_dir}/hh_vbf/
+
+# # Training/testing just use vbf
+# train_dataset: [vbf]
+# test_dataset: [vbf]
+
+# # Explicit train/val/test dirs (relative to data_dir)
+# train_dir: train
+# val_dir: val
+# test_dir: test
+
+

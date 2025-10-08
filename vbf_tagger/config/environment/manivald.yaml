@@ -1,0 +1,19 @@
+name: manivald
+project_dir: /home/norman/vbf-tagger
+data_dir: /home/norman/vbf-tagger/vbf_tagger/data
+tmp_dir: /home/norman/tmp
+# slurm:
+#   queue:
+#     preprocessing:
+#       output_dir: /home/norman/VBF_preprocessing
+#       partition: main
+#       time: 06:00:00
+#       cpus: 1
+#       mem_map:
+#         CEPC:
+#           one_step: 25G
+#           two_step: 25G
+#         FCC:
+#           one_step: 12G
+#           two_step: 12G
+#       mem: ${host.slurm.queue.preprocessing.mem_map[${dataset.name}][${preprocessing.data_type}]}

@@ -1,0 +1,4 @@
+name: local
+project_dir: /home/norman/vbf-tagger
+data_dir: /home/norman/vbf-tagger/vbf_tagger/data/
+tmp_dir: /home/norman/tmp

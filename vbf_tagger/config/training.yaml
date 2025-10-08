@@ -1,0 +1,25 @@
+training:
+    debug_run: false
+    type: classification  # Options: one_step, two_step_pf, two_step_cl, two_step_minimal
+    # type: one_step  # Options: one_step, two_step, two_step_minimal
+    output_dir: null
+    output_dir_: ${training.output_dir}/${training.type}
+    models_dir: ${training.output_dir_}/models
+    log_dir: ${training.output_dir_}/logs
+    predictions_dir: ${training.output_dir_}/predictions
+    results_dir: ${training.output_dir_}/results
+    dataloader:
+        batch_sizes:
+            classification: 256
+        batch_size: ${training.dataloader.batch_sizes[${training.type}]}
+        num_dataloader_workers: 1
+        prefetch_factor: 100
+    trainer:
+        max_epochs: 50 # 50 epochs in Guang paper
+    model_evaluation: False
+    eval_all: false
+
+hydra:
+    output_subdir: null
+    run:
+        dir: .
