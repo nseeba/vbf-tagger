@@ -9,6 +9,7 @@ from lightning import LightningDataModule
 from torch.utils.data import Dataset, DataLoader, IterableDataset
 from vbf_tagger.tools.data import io
 from vbf_tagger.tools.data.general import initialize_p4, stack_and_pad_features
+import random
 
 
 
@@ -251,29 +252,39 @@ class VBFIterableDataset(BaseIterableDataset):
         mask_valid = ak.num(jets) > 3
         jets = jets[mask_valid]
         isVBF = data.TrainingJet.isVBF[mask_valid]
-
-        # jet objects
         jets_novec = data.TrainingJet[mask_valid]
 
         # build all jet pairs
-        pairs = ak.combinations(jets, 2, fields=["j1", "j2"])
-        pairs_isVBF = ak.combinations(isVBF, 2, fields=["j1", "j2"])
-        pairs_novec = ak.combinations(jets_novec, 2, fields=["j1", "j2"])
+        pairs_all = ak.combinations(jets, 2, fields=["j1", "j2"])
+        pairs_isVBF_all = ak.combinations(isVBF, 2, fields=["j1", "j2"])
+        pairs_novec_all = ak.combinations(jets_novec, 2, fields=["j1", "j2"])
 
-        # kinematics
-        pair_p4 = pairs.j1 + pairs.j2 
-        cand_kinematics = ak.Array({
-            "cand_px": pair_p4.px,
-            "cand_py": pair_p4.py,
-            "cand_pz": pair_p4.pz,
-            "cand_en": pair_p4.energy,
-        })
-        
-        cand_kinematics = ak.pad_none(cand_kinematics, self.max_pairs, clip=True)
-        cand_kinematics = ak.fill_none(cand_kinematics, 0)
-        
-        cand_kinematics_tensors = stack_and_pad_features(cand_kinematics, self.max_pairs)
-        cand_kinematics_tensors = torch.tensor(cand_kinematics_tensors, dtype=torch.float32)
+        # compute ptjj
+        ptjjall = (pairs_all.j1 + pairs_all.j2).pt
+
+        #pt ordering
+        order = ak.argsort(ptjjall, ascending=False)
+        pairsorder = pairs_all[order]
+        pairs_isVBForder = pairs_isVBF_all[order]
+        pairs_novecorder = pairs_novec_all[order]
+        ptjjorder = ptjjall[order]
+
+        # apply cutoff
+        pairsordercutoff = ak.pad_none(pairsorder, 30, clip=True)
+        pairs_isVBFordercutoff = ak.pad_none(pairs_isVBForder, 30, clip=True)
+        pairs_novecordercutoff = ak.pad_none(pairs_novecorder, 30, clip=True)
+        ptjjordercutoff = ak.pad_none(ptjjorder, 30, clip=True)
+
+        # shuffling
+        shuff_idx = ak.local_index(ptjjordercutoff)  # [0..max_pairs-1]
+        shuff_idx = ak.from_regular(ak.Array([np.random.permutation(30)] * len(ptjjordercutoff)))
+        pairs = pairsordercutoff[shuff_idx]
+        pairs_isVBF = pairs_isVBFordercutoff[shuff_idx]
+        pairs_novec = pairs_novecordercutoff[shuff_idx]
+        # ptjjshuffled = ptjjordercutoff[shuff_idx]
+
+        # compute 4vec
+        pair_p4 = pairs.j1 + pairs.j2
 
         # compute pair-level features
         mjj = (pairs.j1 + pairs.j2).mass
@@ -345,6 +356,21 @@ class VBFIterableDataset(BaseIterableDataset):
         cand_features_tensors = stack_and_pad_features(cand_features, self.max_pairs)
         cand_features_tensors = torch.tensor(cand_features_tensors, dtype=torch.float32)
 
+        # kinematics
+        cand_kinematics = ak.Array({
+            "cand_px": pair_p4.px,
+            "cand_py": pair_p4.py,
+            "cand_pz": pair_p4.pz,
+            "cand_en": pair_p4.energy,
+        })
+        
+        cand_kinematics = ak.pad_none(cand_kinematics, self.max_pairs, clip=True)
+        cand_kinematics = ak.fill_none(cand_kinematics, 0)
+        
+        cand_kinematics_tensors = stack_and_pad_features(cand_kinematics, self.max_pairs)
+        cand_kinematics_tensors = torch.tensor(cand_kinematics_tensors, dtype=torch.float32)
+
+        # targets
         targets = (pairs_isVBF.j1==1) & (pairs_isVBF.j2==1)
         targets = ak.pad_none(targets, self.max_pairs, clip=True)
         # mask = which pairs are real (before padding)

@@ -340,16 +340,23 @@ class classification(L.LightningModule):
         preds, targets, mask = self.forward(batch)
         loss, acc = self.compute_loss_and_acc(preds, targets, mask)
 
-        self.log("train_loss", loss)
-        self.log("train_acc", acc, prog_bar=True)
+        # self.log("train_loss", loss)
+        # self.log("train_acc", acc, prog_bar=True)
+        self.log("train_loss", loss, on_step=False, on_epoch=True, prog_bar=True, logger=True)
+        self.log("train_acc", acc, on_step=False, on_epoch=True, prog_bar=True, logger=True)
+
         return loss
 
     def validation_step(self, batch, batch_idx):
         preds, targets, mask = self.forward(batch)
         loss, acc = self.compute_loss_and_acc(preds, targets, mask)
 
-        self.log("val_loss", loss, prog_bar=True)
-        self.log("val_acc", acc, prog_bar=True)
+        self.log("val_loss", loss, on_step=False, on_epoch=True, prog_bar=True, logger=True)
+        self.log("val_acc", acc, on_step=False, on_epoch=True, prog_bar=True, logger=True)
+
+
+        # self.log("val_loss", loss, prog_bar=True)
+        # self.log("val_acc", acc, prog_bar=True)
         return loss
 
     def configure_optimizers(self):

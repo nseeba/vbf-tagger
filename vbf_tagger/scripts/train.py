@@ -8,6 +8,8 @@ warnings.filterwarnings(
 )
 
 import os
+import comet_ml
+from comet_ml import Experiment
 import glob
 import hydra
 from hydra.utils import instantiate
@@ -22,6 +24,8 @@ from lightning.pytorch.callbacks import TQDMProgressBar, ModelCheckpoint
 from vbf_tagger.tools.data import dataloaders as dl
 from lightning.pytorch.callbacks import EarlyStopping, LearningRateMonitor
 from vbf_tagger.models.LorentzNet import classification
+from lightning.pytorch.loggers import CometLogger
+
 
 
 torch.set_float32_matmul_precision("medium")  # or 'high'
@@ -44,22 +48,44 @@ class FlatCSVLogger(CSVLogger):
 def base_train(cfg: DictConfig, models_dir: str):
     os.makedirs(cfg.training.log_dir, exist_ok=True)
     os.makedirs(models_dir, exist_ok=True)
+
+    # --- Comet logger ---
+    comet_logger = None
+    if "comet" in cfg and getattr(cfg.comet, "api_key", None):
+        comet_logger = CometLogger(
+            api_key=cfg.comet.api_key,
+            project=cfg.comet.project,
+            name=cfg.comet.name,
+            offline_directory=cfg.training.log_dir,
+            log_code=True,
+            log_graph=True,
+        )
+        print(f"Logging to CometML project '{cfg.comet.project}'")
+
+    # --- CSV logger ---
+    csv_logger = FlatCSVLogger(save_dir=cfg.training.log_dir, name="metrics")
+
+    loggers = [csv_logger]
+    if comet_logger:
+        loggers.append(comet_logger)
+
     checkpoint_callback_best = ModelCheckpoint(
         dirpath=models_dir,
         monitor="val_loss",
         mode="min",
         save_top_k=1,
-        # save_weights=True,
         filename="model_best",
     )
+
     # early_stop = EarlyStopping(monitor="val_loss", patience=6, mode="min")
     lr_monitor = LearningRateMonitor(logging_interval="epoch")
     max_epochs = 2 if cfg.training.debug_run else cfg.training.trainer.max_epochs
+
     trainer = L.Trainer(
         max_epochs=max_epochs,
         callbacks=[TQDMProgressBar(refresh_rate=10), checkpoint_callback_best, lr_monitor],
-        logger=FlatCSVLogger(save_dir=cfg.training.log_dir, name="metrics"),
-        overfit_batches=1 if cfg.training.debug_run else 0,
+        logger=loggers,
+        overfit_batches=1.0 if cfg.training.debug_run else None
         num_sanity_val_steps=0,
     )
     # trainer = L.Trainer(
@@ -124,6 +150,42 @@ def train_vbf(cfg: DictConfig, data_type: str):
     metrics_path = os.path.join(cfg.training.log_dir, "metrics.csv")
     best_model_path = os.path.join(cfg.training.models_dir, "model_best.ckpt")
 
+    if not cfg.training.model_evaluation:
+        trainer, checkpoint_callback = base_train(cfg, models_dir=models_dir)
+        trainer.fit(model=model, datamodule=datamodule)
+        best_model_path = checkpoint_callback.best_model_path
+        metrics_path = os.path.join(trainer.logger.log_dir, "metrics.csv")
+    else:
+        if not os.path.exists(metrics_path) or not os.path.exists(best_model_path):
+            best_model_path = cfg.models.classification.model.checkpoint.model
+            metrics_path = cfg.models.classification.model.checkpoint.losses
+
+    return model, best_model_path, metrics_path
+
+
+def train_flatpair(cfg: DictConfig):
+    print(f"Training {cfg.models.classification.model.name} (FlatPair MLP Classifier).")
+    models_dir = cfg.training.models_dir
+
+    # Build datamodule
+    from vbf_tagger.tools.data.flatpair_dataloader import FlatPairDataModule
+    datamodule = FlatPairDataModule(cfg)
+    datamodule.setup(stage="fit")
+
+    # Build model
+    from vbf_tagger.models.MLPClassifier import MLPClassifier
+    model = MLPClassifier(
+        input_dim=cfg.dataset.input_dim,
+        hidden_dim=cfg.models.classification.model.hidden_dim,
+        lr=cfg.training.optimizer.lr,
+        pos_weight=datamodule.pos_weight,
+    )
+
+    # Set up paths
+    metrics_path = os.path.join(cfg.training.log_dir, "metrics.csv")
+    best_model_path = os.path.join(cfg.training.models_dir, "model_best.ckpt")
+
+    # Train or evaluate
     if not cfg.training.model_evaluation:
         trainer, checkpoint_callback = base_train(cfg, models_dir=models_dir)
         trainer.fit(model=model, datamodule=datamodule)
@@ -254,8 +316,10 @@ def main(cfg: DictConfig):
         print("Running in debug mode, only a few epochs and files will be processed.")
     training_type = cfg.training.type
     if training_type == "classification":
-        print("Training classification model.")
-        model, best_model_path, metrics_path = train_vbf(cfg, data_type="")
+        # print("Training classification model.")
+        # model, best_model_path, metrics_path = train_vbf(cfg, data_type="")
+        print("Training flat-pair MLP classifier.")
+        model, best_model_path, metrics_path = train_flatpair(cfg)
         if cfg.training.model_evaluation:
             checkpoint = torch.load(best_model_path)
             model.load_state_dict(checkpoint["state_dict"])

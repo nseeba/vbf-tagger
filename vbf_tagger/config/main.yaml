@@ -3,6 +3,16 @@ defaults:
     - environment@host: manivald  # Options: lumi, manivald
     - datasets@dataset: 22pre
     - models: models
+    - models/classification@classification: classification
     - datasets@datasets.22pre: 22pre
     - evaluation: evaluation
     - training
+    - comet
+
+data_module:
+  _target_: vbf_tagger.tools.data.flatpair_dataloader.FlatPairDataModule
+
+ensemble:
+  mlp_checkpoint: "/home/norman/vbf-tagger/outputs/MLP_251105/classification/models/model_best.ckpt"
+  xgb_model: "/home/norman/vbf-tagger/XGBoost/xgboost_vbf_251107.json"
+  output_dir: ${hydra:run.dir}/ensemble

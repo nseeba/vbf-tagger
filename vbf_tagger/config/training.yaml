@@ -16,6 +16,8 @@ training:
         prefetch_factor: 100
     trainer:
         max_epochs: 50 # 50 epochs in Guang paper
+    optimizer:
+        lr: 1e-3
     model_evaluation: False
     eval_all: false
 

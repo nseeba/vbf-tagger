@@ -1,2 +1,5 @@
 vbf_tagger/data/
 slurm-logs/
+outputs/
+ensemble/
+XGBoost/
