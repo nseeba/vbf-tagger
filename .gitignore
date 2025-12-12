@@ -3,3 +3,10 @@ slurm-logs/
 outputs/
 ensemble/
 XGBoost/
+notebooks/
+Untitled.ipynb
+train_ensemble.log
+train_xgboost.log
+train.log
+PT.ipynp
+vbf_tagger/test1.ipynb

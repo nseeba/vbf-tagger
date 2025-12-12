@@ -25,6 +25,10 @@ from vbf_tagger.tools.data import dataloaders as dl
 from lightning.pytorch.callbacks import EarlyStopping, LearningRateMonitor
 from vbf_tagger.models.LorentzNet import classification
 from lightning.pytorch.loggers import CometLogger
+from vbf_tagger.tools.data.pt_dataloader import JetDataModule
+from vbf_tagger.models.ParticleTransformer import ParticleTransformer
+from vbf_tagger.tools.pt_lightning import PTLightningModule
+
 
 
 
@@ -77,22 +81,22 @@ def base_train(cfg: DictConfig, models_dir: str):
         filename="model_best",
     )
 
-    # early_stop = EarlyStopping(monitor="val_loss", patience=6, mode="min")
+    early_stop = EarlyStopping(monitor="val_loss", patience=6, mode="min")
     lr_monitor = LearningRateMonitor(logging_interval="epoch")
     max_epochs = 2 if cfg.training.debug_run else cfg.training.trainer.max_epochs
 
     trainer = L.Trainer(
         max_epochs=max_epochs,
-        callbacks=[TQDMProgressBar(refresh_rate=10), checkpoint_callback_best, lr_monitor],
+        callbacks=[TQDMProgressBar(refresh_rate=10), checkpoint_callback_best, early_stop, lr_monitor],
         logger=loggers,
-        overfit_batches=1.0 if cfg.training.debug_run else None
+        overfit_batches = 1.0 if cfg.training.debug_run else 0.0,
         num_sanity_val_steps=0,
     )
     # trainer = L.Trainer(
     #     max_epochs=max_epochs,
     #     callbacks=[TQDMProgressBar(refresh_rate=10), checkpoint_callback_best, early_stop, lr_monitor],
     #     logger=FlatCSVLogger(save_dir=cfg.training.log_dir, name="metrics"),
-    #     overfit_batches=1 if cfg.training.debug_run else 0,
+    #     overfit_batches=1.0 if cfg.training.debug_run else 0.0,
     #     num_sanity_val_steps=0,
     # )
     return trainer, checkpoint_callback_best
@@ -198,6 +202,84 @@ def train_flatpair(cfg: DictConfig):
 
     return model, best_model_path, metrics_path
 
+
+def train_pt(cfg: DictConfig, data_type: str):
+    print(f"Training {cfg.models.classification.model.name}.")
+    models_dir = cfg.training.models_dir
+
+    # datamodule
+    datamodule = JetDataModule(
+        cfg=cfg,
+        features = ["log_pt","eta","sin_phi","cos_phi","log_mass","btagDeepFlavB","btagDeepFlavQG"
+                    ,"btagPNetB","btagPNetQvG","btagPNetTauVJet","hhbtag",],
+        max_jets=14
+    )
+    datamodule.setup("fit")
+
+    # build PT model
+    pt_model = ParticleTransformer(
+        input_dim=len(datamodule.features),
+        num_classes=1,
+        **cfg.models.classification.model.hyperparameters
+    )
+
+    # wrap it with Lightning
+    model = PTLightningModule(
+        model=pt_model,
+        lr=cfg.training.optimizer.lr,
+        pos_weight=datamodule.pos_weight,
+    )
+
+    metrics_path = os.path.join(cfg.training.log_dir, "metrics.csv")
+    best_model_path = os.path.join(cfg.training.models_dir, "model_best.ckpt")
+
+    if not cfg.training.model_evaluation:
+        trainer, checkpoint_callback = base_train(cfg, models_dir=models_dir)
+        trainer.fit(model=model, datamodule=datamodule)
+        best_model_path = checkpoint_callback.best_model_path
+        metrics_path = os.path.join(trainer.logger.log_dir, "metrics.csv")
+    else:
+        if not os.path.exists(metrics_path) or not os.path.exists(best_model_path):
+            best_model_path = cfg.models.classification.model.checkpoint.model
+            metrics_path = cfg.models.classification.model.checkpoint.losses
+
+    return model, best_model_path, metrics_path
+
+
+# # simple version, first test
+# def train_pt(cfg: DictConfig, data_type: str):
+#     print(f"Training {cfg.models.classification.model.name} for VBF classification.")
+#     models_dir = cfg.training.models_dir
+
+#     # Build datamodule first
+#     datamodule = JetDataModule(
+#         cfg=cfg,
+#         features=["pt","eta","phi","mass"],  # input features
+#         max_jets=14
+#     )
+#     datamodule.setup(stage="fit")
+
+#     # Now build model
+#     model = ParticleTransformer(
+#         n_features=len(datamodule.features),
+#         pos_weight=datamodule.pos_weight,
+#         **cfg.models.classification.model.hyperparameters
+#     )
+
+#     metrics_path = os.path.join(cfg.training.log_dir, "metrics.csv")
+#     best_model_path = os.path.join(cfg.training.models_dir, "model_best.ckpt")
+
+#     if not cfg.training.model_evaluation:
+#         trainer, checkpoint_callback = base_train(cfg, models_dir=models_dir)
+#         trainer.fit(model=model, datamodule=datamodule)
+#         best_model_path = checkpoint_callback.best_model_path
+#         metrics_path = os.path.join(trainer.logger.log_dir, "metrics.csv")
+#     else:
+#         if not os.path.exists(metrics_path) or not os.path.exists(best_model_path):
+#             best_model_path = cfg.models.classification.model.checkpoint.model
+#             metrics_path = cfg.models.classification.model.checkpoint.losses
+
+#     return model, best_model_path, metrics_path
 
 
 def train_one_step(cfg: DictConfig, data_type: str):
@@ -318,8 +400,10 @@ def main(cfg: DictConfig):
     if training_type == "classification":
         # print("Training classification model.")
         # model, best_model_path, metrics_path = train_vbf(cfg, data_type="")
-        print("Training flat-pair MLP classifier.")
-        model, best_model_path, metrics_path = train_flatpair(cfg)
+        # print("Training flat-pair MLP classifier.")
+        # model, best_model_path, metrics_path = train_flatpair(cfg)
+        print("Training ParticleTransformer.")
+        model, best_model_path, metrics_path = train_pt(cfg, data_type="")
         if cfg.training.model_evaluation:
             checkpoint = torch.load(best_model_path)
             model.load_state_dict(checkpoint["state_dict"])

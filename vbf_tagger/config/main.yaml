@@ -10,7 +10,9 @@ defaults:
     - comet
 
 data_module:
-  _target_: vbf_tagger.tools.data.flatpair_dataloader.FlatPairDataModule
+  # _target_: vbf_tagger.tools.data.flatpair_dataloader.FlatPairDataModule
+  _target_: vbf_tagger.tools.data.pt_dataloader.JetDataModule
+
 
 ensemble:
   mlp_checkpoint: "/home/norman/vbf-tagger/outputs/MLP_251105/classification/models/model_best.ckpt"

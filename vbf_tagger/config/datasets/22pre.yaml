@@ -1,5 +1,5 @@
 name: 22pre
-input_dim: 20
+input_dim: 11
 branches: null
 tree_path: null
 

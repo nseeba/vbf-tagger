@@ -77,7 +77,7 @@ def train_xgboost(cfg: DictConfig):
     print(f" Validation AUC = {auc_val:.4f}")
 
     # Save model
-    out = "XGBoost/xgboost_vbf_251107.json"
+    out = "XGBoost/xgboost_vbf_251117.json"
     bst.save_model(out)
     print(f" Saved model to {out}")
 

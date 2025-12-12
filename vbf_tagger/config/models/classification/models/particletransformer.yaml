@@ -1,0 +1,26 @@
+# ParticleTransformer model config
+name: particletransformer
+
+hyperparameters:
+  # Architectural params from Weaver-Core
+  embed_dims: [128, 512, 128]
+  pair_embed_dims: [64, 64, 64]
+
+  num_heads: 8
+  num_layers: 8
+  num_cls_layers: 2
+
+  activation: gelu
+
+  # optional:
+  pair_input_dim: 4
+  pair_extra_dim: 0
+  remove_self_pair: false
+  use_pre_activation_pair: true
+  trim: true
+  for_inference: false
+  use_amp: false
+
+checkpoint:
+  model: null
+  losses: null

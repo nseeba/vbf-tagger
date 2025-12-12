@@ -58,39 +58,41 @@ def build_flat_pair_features(data: ak.Array):
     # PuppiMET_covXY_per_pair, _ = ak.broadcast_arrays(PuppiMET_covXY, pairs)
     # PuppiMET_pt_per_pair, _ = ak.broadcast_arrays(PuppiMET_pt, pairs)
 
-    # # event-level vars
-    # event_energy = ak.sum(jets.energy, axis=1)
+    # event-level vars
+    event_energy = ak.sum(jets.energy, axis=1)
+    event_energy_per_pair, _ = ak.broadcast_arrays(event_energy, pairs)
+    eventenergy = ak.flatten(event_energy_per_pair)
     # event_pt = ak.sum(jets.pt, axis=1)
-    # event_energy_per_pair, _ = ak.broadcast_arrays(event_energy, pairs)
     # event_pt_per_pair, _ = ak.broadcast_arrays(event_pt, pairs)
 
     targets = ak.flatten((pairs_isVBF.j1 == 1) & (pairs_isVBF.j2 == 1))
 
     features = ak.Array({
         "mjj": mjj,
-        "ptjj": ptjj,
-        "deta": deta,
-        "dphi": dphi,
-        "btagDeepFlavB_sum": btagDeepFlavB_sum,
-        "btagDeepFlavCvB_sum": btagDeepFlavCvB_sum,
-        "btagDeepFlavCvL_sum": btagDeepFlavCvL_sum,
-        "btagDeepFlavQG_sum": btagDeepFlavQG_sum,
+        # "ptjj": ptjj,
+        # "deta": deta,
+        # "dphi": dphi,
+        # "btagDeepFlavB_sum": btagDeepFlavB_sum,
+        # "btagDeepFlavCvB_sum": btagDeepFlavCvB_sum,
+        # "btagDeepFlavCvL_sum": btagDeepFlavCvL_sum,
+        # "btagDeepFlavQG_sum": btagDeepFlavQG_sum,
         "btagPNetB_sum": btagPNetB_sum,
-        "btagPNetCvB_sum": btagPNetCvB_sum,
-        "btagPNetCvL_sum": btagPNetCvL_sum,
-        "btagPNetCvNotB_sum": btagPNetCvNotB_sum,
-        "btagPNetQvG_sum": btagPNetQvG_sum,
-        "btagPNetTauVJet_sum": btagPNetTauVJet_sum,
-        "hhbtag_sum": hhbtag_sum,
-        "e_mjj": e_mjj,
-        "dRjj": dRjj,
+        # "btagPNetCvB_sum": btagPNetCvB_sum,
+        # "btagPNetCvL_sum": btagPNetCvL_sum,
+        # "btagPNetCvNotB_sum": btagPNetCvNotB_sum,
+        # "btagPNetQvG_sum": btagPNetQvG_sum,
+        # "btagPNetTauVJet_sum": btagPNetTauVJet_sum,
+        # "hhbtag_sum": hhbtag_sum,
+        # "e_mjj": e_mjj,
+        # "dRjj": dRjj,
         "etaetajj": etaetajj,
         "denergyjj": denergyjj,
-        "min_pt_pair": min_pt_pair,
+        # "min_pt_pair": min_pt_pair,
         # "PuppiMET_covXY_per_pair": PuppiMET_covXY_per_pair,
         # "PuppiMET_pt_per_pair": PuppiMET_pt_per_pair,   
         # "event_energy_per_pair": event_energy_per_pair,
         # "event_pt_per_pair": event_pt_per_pair,
+        "eventenergy": eventenergy,
     })
 
     X = ak.to_numpy(ak.values_astype(features, np.float32))

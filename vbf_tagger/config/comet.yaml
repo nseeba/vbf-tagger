@@ -2,5 +2,5 @@
 comet:
   api_key: "tapsz7IHkL9NoI0Rfcf8VgKhX"    # or leave empty if not logging
   project: "vbf-tagger"
-  name: "MLPClassifier"
+  name: "ParticleTransformer"
   workspace: "nseeba"
